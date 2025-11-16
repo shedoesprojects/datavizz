@@ -1,0 +1,6 @@
+Task,Start,Finish,Department
+Planning,2024-01-01,2024-01-15,Management
+Design,2024-01-16,2024-02-10,Design
+Development,2024-02-11,2024-04-30,Engineering
+Testing,2024-05-01,2024-05-31,QA
+Deployment,2024-06-01,2024-06-15,Operations
