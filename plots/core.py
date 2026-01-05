@@ -207,9 +207,9 @@ def line_plot(df, x, y, title="", engine="matplotlib", **kwargs) -> Tuple[str, A
     return "matplotlib", _fig_to_png_bytes(fig)
 
 
-@register_plot("Scatter Plot", params=["x", "y", "hue"], engines=["matplotlib", "plotly"])
+@register_plot("Scatter Plot", params=["x", "y"], engines=["matplotlib", "plotly"])
 @safe_plot
-def scatter_plot(df, x, y, hue=None, title="", engine="matplotlib", **kwargs):
+def scatter_plot(df, x, y, title="", engine="matplotlib", **kwargs):
     df = _auto_convert_numeric(df)
     _require_columns(df, [x, y])
     data = df.dropna(subset=[x, y])
@@ -217,22 +217,15 @@ def scatter_plot(df, x, y, hue=None, title="", engine="matplotlib", **kwargs):
     _apply_theme(engine, theme_cfg)
     if data.empty:
         raise ValueError("No data to plot after removing NaNs.")
-    if hue and hue not in df.columns:
-        raise ValueError(f"Hue column '{hue}' not found.")
 
     if engine == "plotly":
         import plotly.express as px
-        fig = px.scatter(data, x=x, y=y, color=hue, title=title)
+        fig = px.scatter(data, x=x, y=y, title=title)
         return "plotly", fig
 
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=kwargs.get("figsize", (6, 6)))
-    if hue:
-        for name, group in data.groupby(hue):
-            ax.scatter(group[x], group[y], label=str(name), alpha=0.8)
-        ax.legend()
-    else:
-        ax.scatter(data[x], data[y], alpha=0.7)
+    ax.scatter(data[x], data[y], alpha=0.7)
     ax.set_title(title or f"{y} vs {x}")
     ax.set_xlabel(x)
     ax.set_ylabel(y)
@@ -413,27 +406,25 @@ def time_series_plot(df, x, y, title="", engine="matplotlib", **kwargs):
 
 # ----------------- BATCH 1 NEW PLOTS -----------------
 
-@register_plot("Stacked Bar Chart", params=["x", "y", "hue"], engines=["matplotlib", "plotly"])
+@register_plot("Stacked Bar Chart", params=["x", "y"], engines=["matplotlib", "plotly"])
 @safe_plot
-def stacked_bar(df, x, y, hue=None, title="", engine="matplotlib", **kwargs):
+def stacked_bar(df, x, y, title="", engine="matplotlib", **kwargs):
     df = _auto_convert_numeric(df)
     _require_columns(df, [x, y])
     _require_numeric(df, [y])
     theme_cfg = kwargs.get("theme_config", {})
     _apply_theme(engine, theme_cfg)
-    if hue and hue not in df.columns:
-        raise ValueError(f"Hue column '{hue}' not found.")
     data = df.dropna(subset=[x, y])
 
     if engine == "plotly":
         import plotly.express as px
-        fig = px.bar(data, x=x, y=y, color=hue, title=title)
+        fig = px.bar(data, x=x, y=y, title=title)
         return "plotly", fig
 
     import matplotlib.pyplot as plt
     import seaborn as sns
     fig, ax = plt.subplots(figsize=kwargs.get("figsize", (8, 5)))
-    sns.barplot(data=data, x=x, y=y, hue=hue, ax=ax, errorbar=None)
+    sns.barplot(data=data, x=x, y=y, ax=ax, errorbar=None)
     ax.set_title(title or f"Stacked Bar of {y} by {x}")
     return "matplotlib", _fig_to_png_bytes(fig)
 
@@ -848,20 +839,20 @@ def icicle_chart(df, path, value, title="", engine="plotly", **kwargs):
 
 # ----------------- BATCH 5 NEW PLOTS -----------------
 
-@register_plot("Bubble Chart", params=["x", "y", "size", "hue"], engines=["plotly"])
+@register_plot("Bubble Chart", params=["x", "y", "size"], engines=["plotly"])
 @safe_plot
-def bubble_chart(df, x, y, size, hue=None, title="", engine="plotly", **kwargs):
+def bubble_chart(df, x, y, size, title="", engine="plotly", **kwargs):
     df = _auto_convert_numeric(df)
     _require_columns(df, [x, y, size])
     _require_numeric(df, [x, y, size])
-    data = df[[x, y, size] + ([hue] if hue else [])].dropna()
+    data = df[[x, y, size]].dropna()
     theme_cfg = kwargs.get("theme_config", {})
     _apply_theme(engine, theme_cfg)
     if data.empty:
         raise ValueError("No data for bubble chart.")
 
     import plotly.express as px
-    fig = px.scatter(data, x=x, y=y, size=size, color=hue, title=title, hover_name=x)
+    fig = px.scatter(data, x=x, y=y, size=size, title=title, hover_name=x)
     return "plotly", fig
 
 @register_plot("Hexbin Plot", params=["x", "y"], engines=["matplotlib"])
@@ -907,20 +898,20 @@ def dendrogram_plot(df, columns, title="", engine="matplotlib", **kwargs):
     return "matplotlib", _fig_to_png_bytes(fig)
 
 
-@register_plot("Streamgraph", params=["x", "y", "hue"], engines=["plotly"])
+@register_plot("Streamgraph", params=["x", "y"], engines=["plotly"])
 @safe_plot
-def streamgraph(df, x, y, hue, title="", engine="plotly", **kwargs):
+def streamgraph(df, x, y, title="", engine="plotly", **kwargs):
     df = _auto_convert_numeric(df)
-    _require_columns(df, [x, y, hue])
+    _require_columns(df, [x, y])
     _require_numeric(df, [y])
-    data = df[[x, y, hue]].dropna()
+    data = df[[x, y]].dropna()
     theme_cfg = kwargs.get("theme_config", {})
     _apply_theme(engine, theme_cfg)
     if data.empty:
         raise ValueError("No data for streamgraph.")
 
     import plotly.express as px
-    fig = px.area(data, x=x, y=y, color=hue, line_group=hue, title=title, groupnorm="fraction")
+    fig = px.area(data, x=x, y=y, title=title, groupnorm="fraction")
     return "plotly", fig
 
 @register_plot("Gauge Chart", params=["value"], engines=["plotly"])
@@ -944,13 +935,13 @@ def gauge_chart(df, value, title="", engine="plotly", **kwargs):
     ))
     return "plotly", fig
 
-@register_plot("Joy/Ridge Plot", params=["x", "hue"], engines=["matplotlib"])
+@register_plot("Joy/Ridge Plot", params=["x"], engines=["matplotlib"])
 @safe_plot
-def ridge_plot(df, x, hue, title="", engine="matplotlib", **kwargs):
+def ridge_plot(df, x, title="", engine="matplotlib", **kwargs):
     df = _auto_convert_numeric(df)
-    _require_columns(df, [x, hue])
+    _require_columns(df, [x])
     _require_numeric(df, [x])
-    data = df[[x, hue]].dropna()
+    data = df[[x]].dropna()
     theme_cfg = kwargs.get("theme_config", {})
     _apply_theme(engine, theme_cfg)
     if data.empty:
@@ -959,10 +950,10 @@ def ridge_plot(df, x, hue, title="", engine="matplotlib", **kwargs):
     import seaborn as sns
     import matplotlib.pyplot as plt
     plt.close("all")
-    g = sns.FacetGrid(data, row=hue, hue=hue, aspect=4, height=1.5, palette="tab10")
+    g = sns.FacetGrid(data, aspect=4, height=1.5, palette="tab10")
     g.map(sns.kdeplot, x, fill=True)
     g.map(plt.axhline, y=0, lw=2)
-    g.fig.suptitle(title or f"Ridge Plot of {x} by {hue}", y=1.02)
+    g.fig.suptitle(title or f"Ridge Plot of {x}", y=1.02)
     return "matplotlib", _fig_to_png_bytes(g.fig)
 
 
@@ -1001,34 +992,25 @@ def network_graph(df, source, target, title="", engine="plotly", **kwargs):
 
 # ---------------- BATCH 6 NEW PLOTS---------------- #
 
-@register_plot("Population Pyramid", params=["x", "y", "hue"], engines=["matplotlib", "plotly"])
+@register_plot("Population Pyramid", params=["x", "y"], engines=["matplotlib", "plotly"])
 @safe_plot
-def population_pyramid(df, x, y, hue=None, title="", engine="matplotlib", **kwargs):
+def population_pyramid(df, x, y, title="", engine="matplotlib", **kwargs):
     df = _auto_convert_numeric(df)
     _require_columns(df, [x, y])
     _require_numeric(df, [y])
     data = df.dropna(subset=[x, y])
     theme_cfg = kwargs.get("theme_config", {})
     _apply_theme(engine, theme_cfg)
-    if hue and hue not in df.columns:
-        raise ValueError(f"Hue column '{hue}' not found.")
 
     if engine == "plotly":
         import plotly.express as px
-        fig = px.bar(data, x=y, y=x, color=hue, orientation="h", barmode="relative", title=title)
+        fig = px.bar(data, x=y, y=x, orientation="h", barmode="relative", title=title)
         return "plotly", fig
 
     import matplotlib.pyplot as plt
     plt.close("all")
     fig, ax = plt.subplots(figsize=(8, 6))
-    if hue:
-        categories = data[hue].unique()
-        for cat in categories:
-            subset = data[data[hue] == cat]
-            ax.barh(subset[x], subset[y] * (1 if cat == categories[0] else -1), label=str(cat))
-        ax.legend()
-    else:
-        ax.barh(data[x], data[y])
+    ax.barh(data[x], data[y])
     ax.set_title(title or "Population Pyramid")
     return "matplotlib", _fig_to_png_bytes(fig)
 
@@ -1108,9 +1090,9 @@ def grouped_bar_chart(df, x, y_cols, title="", engine="matplotlib", **kwargs):
 
 
 
-@register_plot("Stacked Histogram", params=["x", "hue"], engines=["matplotlib", "plotly"])
+@register_plot("Stacked Histogram", params=["x"], engines=["matplotlib", "plotly"])
 @safe_plot
-def stacked_histogram(df, x, hue=None, bins=30, title="", engine="matplotlib", **kwargs):
+def stacked_histogram(df, x, bins=30, title="", engine="matplotlib", **kwargs):
     df = _auto_convert_numeric(df)
     _require_columns(df, [x])
     _require_numeric(df, [x])
@@ -1118,18 +1100,13 @@ def stacked_histogram(df, x, hue=None, bins=30, title="", engine="matplotlib", *
     _apply_theme(engine, theme_cfg)
     if engine == "plotly":
         import plotly.express as px
-        fig = px.histogram(df, x=x, color=hue, nbins=bins, barmode="stack", title=title)
+        fig = px.histogram(df, x=x, nbins=bins, barmode="stack", title=title)
         return "plotly", fig
 
     import matplotlib.pyplot as plt
     plt.close("all")
     fig, ax = plt.subplots(figsize=(8, 6))
-    if hue:
-        groups = [df[df[hue] == cat][x].dropna() for cat in df[hue].dropna().unique()]
-        ax.hist(groups, bins=bins, stacked=True, label=df[hue].unique())
-        ax.legend()
-    else:
-        ax.hist(df[x].dropna(), bins=bins)
+    ax.barh(data[x], data[y])
     ax.set_title(title or f"Stacked Histogram of {x}")
     return "matplotlib", _fig_to_png_bytes(fig)
 

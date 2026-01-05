@@ -1,6 +1,7 @@
 import streamlit as st
 from io_utils.file_handler import read_uploaded_file
 from plots.registry import list_plots, plot_metadata, generate_plot
+from io_utils.user_errors import format_user_error
 from config import settings
 import pandas as pd
 import plots.core
@@ -26,8 +27,15 @@ print("✅ Loaded GROQ key (debug):", os.getenv("GROQ_API_KEY")[:10], "...")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # ------------------ PAGE CONFIG ------------------
-st.set_page_config(page_title="DataWiz - Visualizer", layout="wide")
-st.sidebar.title("📊 DataWiz — Upload & Plot")
+st.sidebar.markdown("### Help & Documentation")
+st.sidebar.markdown(
+    "[Open User Manual](https://docs.google.com/document/d/1bNZRQYzQ2zVRs1wqQZfID0Kb1Sh9XAINsBu5gZEY52A/edit?usp=sharing)",
+    unsafe_allow_html=True
+)
+st.sidebar.markdown("---")
+
+st.set_page_config(page_title="dataVizzz - Visualizer", layout="wide")
+st.sidebar.title("dataVizzz — Upload & Plot")
 
 # ------------------ FILE UPLOAD ------------------
 uploaded = st.sidebar.file_uploader("Upload CSV / Excel", type=["csv", "xls", "xlsx"])
@@ -44,7 +52,7 @@ else:
 
 # ------------------ LEARN SECTION ------------------
 st.markdown("---")
-st.header("🎓 Learn")
+st.header(" Learn")
 
 if "active_learn_section" not in st.session_state:
     st.session_state.active_learn_section = None
@@ -56,11 +64,11 @@ with colA:
         st.session_state.active_learn_section = "recommendations"
 
 with colB:
-    if st.button("📘 Learn About a Chart", use_container_width=True):
+    if st.button("💡 Learn About a Chart", use_container_width=True):
         st.session_state.active_learn_section = "chart"
 
 with colC:
-    if st.button("🧠 Learn About a Concept", use_container_width=True):
+    if st.button("💡 Learn About a Concept", use_container_width=True):
         st.session_state.active_learn_section = "concept"
 
 # --- Handle exclusive display ---
@@ -70,16 +78,16 @@ if st.session_state.active_learn_section == "recommendations":
         with st.spinner("Analyzing your dataset..."):
             recommendations = suggest_charts(df)
         st.success(f"**Top Recommended Chart:** {recommendations['best']}")
-        st.markdown("### 🥇 Top 3 Suggestions")
+        st.markdown("### Top 3 Suggestions")
         for rec in recommendations["top3"]:
             st.markdown(f"**{rec['name']}** — {rec['reason']}")
-        with st.expander("📊 See All Possible Charts", expanded=False):
+        with st.expander(" See All Possible Charts", expanded=False):
             st.write(", ".join(recommendations["all_possible"]))
     except Exception as e:
         st.error(f"Couldn't generate recommendations: {e}")
 
 elif st.session_state.active_learn_section == "chart":
-    st.subheader("📘 Learn About a Chart")
+    st.subheader("💡 Learn About a Chart")
     chart_choice = st.selectbox("Select a chart to learn about", list_plots())
     if chart_choice:
         plot_info = explain_plot(chart_choice)
@@ -88,13 +96,18 @@ elif st.session_state.active_learn_section == "chart":
             st.info(plot_info["use"])
 
 elif st.session_state.active_learn_section == "concept":
-    st.subheader("🧠 Learn About a Concept")
+    st.subheader("💡 Learn About a Concept")
     concept_input = st.text_input("Enter a concept (e.g., correlation, variance)")
     if st.button("Explain Concept"):
         if concept_input.strip():
             st.write(explain_concept(concept_input))
         else:
             st.warning("Please enter a concept to learn about.")
+
+# ------------------ DATA PREVIEW ------------------
+st.header("Data Preview")
+with st.expander("Preview Dataset", expanded=False):
+    st.dataframe(df.head(10), use_container_width=True)
 
 # ------------------ PLOT CONFIG ------------------
 plots = list_plots()
@@ -138,11 +151,6 @@ for p in params_needed:
             key=p
         )
 
-    elif p == "hue":
-        options = ["(None)"] + all_columns
-        hue = st.sidebar.selectbox("HUE (optional)", options=options, key=p)
-        params["hue"] = None if hue == "(None)" else hue
-
     elif p in ["y_cols", "vars", "columns", "dimension_columns", "path_cols", "values"]:
         params[p] = st.sidebar.multiselect(
             f"{p.upper()} (select multiple)",
@@ -178,8 +186,8 @@ params["title"] = title or uploaded.name.split('.')[0]
 params["engine"] = engine
 params["figsize"] = (fig_w, fig_h)
 
-# --- 🎨 Customize Colors ---
-with st.sidebar.expander("🎨 Customize Colors", expanded=False):
+# ---  Customize Colors ---
+with st.sidebar.expander(" Customize Colors", expanded=False):
     theme_choice = st.selectbox(
         "Color Theme",
         ["Default", "Seaborn", "Plotly Dark", "Minimal", "Custom"],
@@ -208,14 +216,13 @@ params["theme_config"] = theme_config
 download_format = st.sidebar.selectbox("Choose Download Format", ["PNG", "PDF", "SVG"], index=0)
 
 # ------------------ MAIN DISPLAY ------------------
-col1, col2 = st.columns([3, 2])
 
-with col1:
-    st.header("Visualization")
-    with st.expander("Current Parameters", expanded=False):
+
+st.header("Visualization")
+with st.expander("Current Parameters", expanded=False):
         st.json({k: str(v) for k, v in params.items() if k not in ['figsize', 'title', 'engine']})
 
-    if st.button("Render Plot", use_container_width=True):
+if st.button("Render Plot", use_container_width=True):
         try:
             engine_used, payload = generate_plot(df, plot_choice, params.copy())
             if engine_used == "plotly":
@@ -228,14 +235,18 @@ with col1:
                 st.image(payload, use_container_width=True)
                 st.download_button("Download PNG", payload, file_name=f"{plot_choice}.png", mime="image/png")
         except Exception as e:
-            st.error(f"❌ Failed to render: {e}")
+            user_error = format_user_error(e)
+
+            st.error(f"⚠️ {user_error['title']}")
+            st.info(user_error["message"])
+
 
 # ==============================================
-# 🧠 EXPLAIN THIS CHART — Auto LLM Integration
+# 💡 EXPLAIN THIS CHART — Auto LLM Integration
 # ==============================================
 from ai.groq_llm import explain_chart_with_llm
 
-with st.expander("🧠 Explain This Chart", expanded=False):
+with st.expander("💡 Explain This Chart", expanded=False):
     # --- Static educational info ---
     plot_info = explain_plot(plot_choice)
     st.markdown(f"**What this shows:** {plot_info['explanation']}")
@@ -256,13 +267,33 @@ with st.expander("🧠 Explain This Chart", expanded=False):
     else:
         st.info("Set your GROQ_API_KEY in .env to enable AI explanations.")
 
-# ------------------ INSIGHTS PANEL ------------------
-with col2:
-    st.header("AI Insights")
-    with st.expander("Data Preview", expanded=False):
-        st.dataframe(df.head(10), use_container_width=True)
+from ai.chatbot import chat_with_ai
 
-    if st.button("Generate Insights", use_container_width=True):
+with st.expander("💬 Ask dataVizzz (AI Chatbot)", expanded=False):
+    st.markdown("Chat with dataVizzz about your dataset or visualization.")
+
+    # Display previous messages
+    if "chat_history" in st.session_state and st.session_state.chat_history:
+        for chat in st.session_state.chat_history[-8:]:
+            role_icon = "🧍" if chat["role"] == "user" else "💡"
+            st.markdown(f"**{role_icon} {chat['role'].capitalize()}:** {chat['content']}")
+
+    user_input = st.text_input("Ask your question:", key="chat_input")
+
+    if st.button("Send"):
+        if user_input.strip():
+            reply = chat_with_ai(user_input, df, plot_choice)
+            st.markdown(f"**💡 dataVizzz:** {reply}")
+        else:
+            st.warning("Please type a question before sending.")
+
+    if st.button(" Clear Chat History"):
+        st.session_state.chat_history = []
+        st.experimental_run()
+
+# ------------------ INSIGHTS PANEL ------------------
+
+if st.button("Generate Insights", use_container_width=True):
         if not settings.OPENAI_API_KEY:
             st.subheader("Quick Automatic Insights (Local)")
             st.markdown("### Summary Statistics")
@@ -291,36 +322,13 @@ with col2:
                 st.bar_chart(value_counts)
         else:
             st.info("AI insights via OpenAI integration coming soon!")
-from ai.chatbot import chat_with_ai
-
-with st.expander("💬 Ask DataWiz (AI Chatbot)", expanded=False):
-    st.markdown("Chat with DataWiz about your dataset or visualization.")
-
-    # Display previous messages
-    if "chat_history" in st.session_state and st.session_state.chat_history:
-        for chat in st.session_state.chat_history[-8:]:
-            role_icon = "🧍" if chat["role"] == "user" else "🧠"
-            st.markdown(f"**{role_icon} {chat['role'].capitalize()}:** {chat['content']}")
-
-    user_input = st.text_input("Ask your question:", key="chat_input")
-
-    if st.button("Send"):
-        if user_input.strip():
-            reply = chat_with_ai(user_input, df, plot_choice)
-            st.markdown(f"**🧠 DataWiz:** {reply}")
-        else:
-            st.warning("Please type a question before sending.")
-
-    if st.button("🧹 Clear Chat History"):
-        st.session_state.chat_history = []
-        st.experimental_run()
 
 # ------------------ SIDEBAR TIPS ------------------
 st.sidebar.markdown("---")
-with st.sidebar.expander("💡 Tips & Shortcuts"):
+with st.sidebar.expander("💡 Tips "):
     st.markdown("""
-    - **Multi-select:** Hold Ctrl/Cmd to select multiple columns  
-    - **Auto-detect:** Some plots auto-select numeric columns  
+    - **Render Plot:** Click the button to generate the visualization  
+    - **Customize Colors:** Use the color picker for custom themes
     - **Hover:** Plotly charts are interactive  
     - **Download:** Choose format before exporting  
     """)
