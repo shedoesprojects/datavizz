@@ -239,29 +239,37 @@ if st.button("Render Plot", use_container_width=True):
         mime_map = {"png": "image/png", "pdf": "application/pdf"}
         try:
             buffer = io.BytesIO()
-            payload.write_image(buffer, format=fmt, scale=2)
+        
+            # ✅ force plotly's default color sequence explicitly
+            import plotly.io as pio
+            payload.update_layout(
+                colorway=pio.templates["plotly"].layout.colorway or [
+                    "#636EFA", "#EF553B", "#00CC96", "#AB63FA",
+                    "#FFA15A", "#19D3F3", "#FF6692", "#B6E880"
+                ],
+                paper_bgcolor="white",
+                plot_bgcolor="white",
+            )
+        # re-apply colors to each trace explicitly
+            colors = [
+                "#636EFA", "#EF553B", "#00CC96", "#AB63FA",
+                "#FFA15A", "#19D3F3", "#FF6692", "#B6E880"
+            ]
+            for i, trace in enumerate(payload.data):
+                if hasattr(trace, 'marker') and trace.marker.color is None:
+                    trace.marker.color = colors[i % len(colors)]
+
+            payload.write_image(buffer, format=fmt, scale=2, width=1200, height=600)
             buffer.seek(0)
-            data_bytes = buffer.read()
             st.download_button(
                 f"⬇️ Download {fmt.upper()}",
-                data_bytes,
+                data=buffer.read(),
                 file_name=f"{plot_choice}.{fmt}",
                 mime=mime_map[fmt],
                 key="plotly_download"
             )
-        except Exception:
-            try:
-                img_bytes = payload.to_image(format="png", engine="kaleido")
-                st.download_button(
-                    "⬇️ Download PNG",
-                    img_bytes,
-                    file_name=f"{plot_choice}.png",
-                    mime="image/png",
-                    key="plotly_download_fallback"
-                )
-            except Exception as e:
-                st.warning(f"⚠️ Download unavailable: {e}")
-
+        except Exception as e:
+            st.warning(f"⚠️ Download unavailable: {e}")
     else:  # matplotlib
         st.image(payload, use_container_width=True)
         fmt = download_format.lower()
