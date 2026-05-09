@@ -14,6 +14,7 @@ import os
 from ai.chatbot import chat_with_ai
 import os
 from dotenv import load_dotenv
+import plotly.express as px
 
 # Explicitly load the correct .env file
 load_dotenv(dotenv_path="C:/Users/varsh/Desktop/datawiz/.env", override=True)
@@ -319,7 +320,19 @@ if st.button("Generate Insights", use_container_width=True):
                 st.markdown("### Categorical Distribution")
                 cat_col = st.selectbox("Select Column", text_columns)
                 value_counts = df[cat_col].value_counts().head(10)
-                st.bar_chart(value_counts.to_frame(name="Count"))
+
+                # Create explicit dataframe for reliable charting
+                chart_data = value_counts.reset_index()
+                chart_data.columns = [cat_col, "Count"]
+
+                # Use Plotly for more reliable rendering
+                fig = px.bar(
+                    chart_data,
+                    x=cat_col,
+                    y="Count",
+                    title=f"Distribution of {cat_col}"
+                )
+                st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("AI insights via OpenAI integration coming soon!")
 
