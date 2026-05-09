@@ -319,7 +319,7 @@ if st.button("Generate Insights", use_container_width=True):
                 st.markdown("### Categorical Distribution")
                 cat_col = st.selectbox("Select Column", text_columns)
                 value_counts = df[cat_col].value_counts().head(10)
-                st.bar_chart(value_counts)
+                st.bar_chart(value_counts.to_frame(name="Count"))
         else:
             st.info("AI insights via OpenAI integration coming soon!")
 
