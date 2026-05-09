@@ -219,7 +219,21 @@ download_format = st.sidebar.selectbox("Choose Download Format", ["PNG", "PDF", 
 # ------------------ MAIN DISPLAY ------------------
 
 
-if engine_used == "plotly":
+st.header("Visualization")
+with st.expander("Current Parameters", expanded=False):
+        st.json({k: str(v) for k, v in params.items() if k not in ['figsize', 'title', 'engine']})
+
+if st.button("Render Plot", use_container_width=True):
+    try:
+        engine_used, payload = generate_plot(df, plot_choice, params.copy())
+    except Exception as e:
+        user_error = format_user_error(e)
+        st.error(f"⚠️ {user_error['title']}")
+        st.info(user_error["message"])
+        st.stop()
+
+    # rendering is now outside the generation try/except
+    if engine_used == "plotly":
         st.plotly_chart(payload, use_container_width=True)
         fmt = download_format.lower()
         mime_map = {"png": "image/png", "pdf": "application/pdf", "svg": "image/svg+xml"}
@@ -248,7 +262,7 @@ if engine_used == "plotly":
             except Exception as e:
                 st.warning(f"⚠️ Download unavailable: {e}")
 
-else:  # matplotlib
+    else:  # matplotlib
         st.image(payload, use_container_width=True)
         fmt = download_format.lower()
         if fmt != "png":
@@ -279,6 +293,7 @@ else:  # matplotlib
                 mime="image/png",
                 key="matplotlib_download"
             )
+
 
 # ==============================================
 # 💡 EXPLAIN THIS CHART — Auto LLM Integration
