@@ -239,27 +239,25 @@ if st.button("Render Plot", use_container_width=True):
         mime_map = {"png": "image/png", "pdf": "application/pdf"}
         try:
             buffer = io.BytesIO()
-        
-            # ✅ force plotly's default color sequence explicitly
-            import plotly.io as pio
-            payload.update_layout(
-                colorway=pio.templates["plotly"].layout.colorway or [
-                    "#636EFA", "#EF553B", "#00CC96", "#AB63FA",
-                    "#FFA15A", "#19D3F3", "#FF6692", "#B6E880"
-                ],
-                paper_bgcolor="white",
-                plot_bgcolor="white",
-            )
-        # re-apply colors to each trace explicitly
-            colors = [
+    
+            import copy
+            export_fig = copy.deepcopy(payload)  # don't mutate the displayed figure
+    
+            default_colors = [
                 "#636EFA", "#EF553B", "#00CC96", "#AB63FA",
                 "#FFA15A", "#19D3F3", "#FF6692", "#B6E880"
             ]
-            for i, trace in enumerate(payload.data):
-                if hasattr(trace, 'marker') and trace.marker.color is None:
-                    trace.marker.color = colors[i % len(colors)]
+    
+            for i, trace in enumerate(export_fig.data):
+                color = default_colors[i % len(default_colors)]
+                if hasattr(trace, 'marker'):
+                    if not trace.marker.color:  # only if no color already set
+                        trace.marker.color = color
+                if hasattr(trace, 'line'):
+                    if not trace.line.color:
+                        trace.line.color = color
 
-            payload.write_image(buffer, format=fmt, scale=2, width=1200, height=600)
+            export_fig.write_image(buffer, format=fmt, scale=2, width=1200, height=600)
             buffer.seek(0)
             st.download_button(
                 f"⬇️ Download {fmt.upper()}",
