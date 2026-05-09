@@ -224,22 +224,43 @@ with st.expander("Current Parameters", expanded=False):
         st.json({k: str(v) for k, v in params.items() if k not in ['figsize', 'title', 'engine']})
 
 if st.button("Render Plot", use_container_width=True):
-        try:
-            engine_used, payload = generate_plot(df, plot_choice, params.copy())
-            if engine_used == "plotly":
-                st.plotly_chart(payload, use_container_width=True)
-                fmt = download_format.lower()
-                data_bytes = payload.to_image(format=fmt)
-                mime_map = {"png": "image/png", "pdf": "application/pdf", "svg": "image/svg+xml"}
-                st.download_button(f"Download {fmt.upper()}", data_bytes, file_name=f"{plot_choice}.{fmt}", mime=mime_map[fmt])
-            else:
-                st.image(payload, use_container_width=True)
-                st.download_button("Download PNG", payload, file_name=f"{plot_choice}.png", mime="image/png")
-        except Exception as e:
-            user_error = format_user_error(e)
+    try:
+        engine_used, payload = generate_plot(df, plot_choice, params.copy())
+    except Exception as e:
+        user_error = format_user_error(e)
+        st.error(f"⚠️ {user_error['title']}")
+        st.info(user_error["message"])
+        st.stop()
 
-            st.error(f"⚠️ {user_error['title']}")
-            st.info(user_error["message"])
+    # rendering is now outside the generation try/except
+    if engine_used == "plotly":
+        st.plotly_chart(payload, use_container_width=True)
+        fmt = download_format.lower()
+        mime_map = {"png": "image/png", "pdf": "application/pdf", "svg": "image/svg+xml"}
+        try:
+            data_bytes = payload.to_image(format=fmt)
+            st.download_button(
+                f"Download {fmt.upper()}",
+                data_bytes,
+                file_name=f"{plot_choice}.{fmt}",
+                mime=mime_map[fmt]
+            )
+        except Exception:
+            html_bytes = payload.to_html().encode()
+            st.download_button(
+                "Download HTML (kaleido unavailable)",
+                html_bytes,
+                file_name=f"{plot_choice}.html",
+                mime="text/html"
+            )
+    else:
+        st.image(payload, use_container_width=True)
+        st.download_button(
+            "Download PNG",
+            payload,
+            file_name=f"{plot_choice}.png",
+            mime="image/png"
+        )
 
 
 # ==============================================
