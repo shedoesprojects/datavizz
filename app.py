@@ -214,7 +214,7 @@ with st.sidebar.expander(" Customize Colors", expanded=False):
     theme_config = {"theme": theme_choice, "palette": palette_choice, "custom_colors": custom_colors}
 params["theme_config"] = theme_config
 
-download_format = st.sidebar.selectbox("Choose Download Format", ["PNG", "PDF", "SVG"], index=0)
+download_format = st.sidebar.selectbox("Choose Download Format", ["PNG", "PDF"], index=0)
 
 # ------------------ MAIN DISPLAY ------------------
 
@@ -236,7 +236,7 @@ if st.button("Render Plot", use_container_width=True):
     if engine_used == "plotly":
         st.plotly_chart(payload, use_container_width=True)
         fmt = download_format.lower()
-        mime_map = {"png": "image/png", "pdf": "application/pdf", "svg": "image/svg+xml"}
+        mime_map = {"png": "image/png", "pdf": "application/pdf"}
         try:
             buffer = io.BytesIO()
             payload.write_image(buffer, format=fmt, scale=2)
@@ -275,7 +275,7 @@ if st.button("Render Plot", use_container_width=True):
                 img.save(buffer, format=pil_fmt)
                 buffer.seek(0)
                 data_bytes = buffer.read()
-                mime_map = {"pdf": "application/pdf", "svg": "image/svg+xml"}
+                mime_map = {"pdf": "application/pdf"}
                 st.download_button(
                     f"⬇️ Download {fmt.upper()}",
                     data=data_bytes,
