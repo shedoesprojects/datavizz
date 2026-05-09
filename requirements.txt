@@ -30,3 +30,9 @@ kaleido
 pandas
 openpyxl
 xlrd
+fastapi
+uvicorn
+python-multipart
+pandas
+openpyxl
+xlrd

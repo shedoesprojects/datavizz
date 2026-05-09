@@ -16,18 +16,16 @@ def explain_chart_with_llm(plot_name: str, df_summary: str):
     try:
         client = get_groq_client()
         prompt = f"""
-        You are DataWiz — a data visualization mentor for beginners.
+        You are DataWiz — a data visualization mentor.
 
         Chart type: {plot_name}
         Dataset summary (partial):
         {df_summary}
 
         Explain clearly:
-        1. What this chart type represents.
-        2. What patterns the dataset might show.
-        3. One or two real-world scenarios where it’s useful.
+        What the conclusion from the data is. What trend is observed. What the data tells and is trying to highlight.
 
-        Keep it short, easy to read, and under 200 words.
+        Keep it short, easy to read, and under 200 words but precise and helpful.
         """
 
         # ✅ Primary model
