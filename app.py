@@ -219,51 +219,66 @@ download_format = st.sidebar.selectbox("Choose Download Format", ["PNG", "PDF", 
 # ------------------ MAIN DISPLAY ------------------
 
 
-st.header("Visualization")
-with st.expander("Current Parameters", expanded=False):
-        st.json({k: str(v) for k, v in params.items() if k not in ['figsize', 'title', 'engine']})
-
-if st.button("Render Plot", use_container_width=True):
-    try:
-        engine_used, payload = generate_plot(df, plot_choice, params.copy())
-    except Exception as e:
-        user_error = format_user_error(e)
-        st.error(f"⚠️ {user_error['title']}")
-        st.info(user_error["message"])
-        st.stop()
-
-    # rendering is now outside the generation try/except
-    if engine_used == "plotly":
+if engine_used == "plotly":
         st.plotly_chart(payload, use_container_width=True)
         fmt = download_format.lower()
         mime_map = {"png": "image/png", "pdf": "application/pdf", "svg": "image/svg+xml"}
-
         try:
-            import io
             buffer = io.BytesIO()
-            payload.write_image(buffer, format=fmt, scale=2)  # scale=2 for higher res
+            payload.write_image(buffer, format=fmt, scale=2)
             buffer.seek(0)
             data_bytes = buffer.read()
             st.download_button(
                 f"⬇️ Download {fmt.upper()}",
                 data_bytes,
                 file_name=f"{plot_choice}.{fmt}",
-                mime=mime_map[fmt]
-        )
+                mime=mime_map[fmt],
+                key="plotly_download"
+            )
         except Exception:
-            # last resort — render via matplotlib and save
             try:
-                import io, matplotlib.pyplot as plt
                 img_bytes = payload.to_image(format="png", engine="kaleido")
                 st.download_button(
-                    f"⬇️ Download PNG",
+                    "⬇️ Download PNG",
                     img_bytes,
                     file_name=f"{plot_choice}.png",
-                    mime="image/png"
+                    mime="image/png",
+                    key="plotly_download_fallback"
                 )
             except Exception as e:
                 st.warning(f"⚠️ Download unavailable: {e}")
 
+else:  # matplotlib
+        st.image(payload, use_container_width=True)
+        fmt = download_format.lower()
+        if fmt != "png":
+            # convert png bytes to requested format via PIL
+            try:
+                from PIL import Image
+                img = Image.open(io.BytesIO(payload))
+                buffer = io.BytesIO()
+                pil_fmt = "PDF" if fmt == "pdf" else fmt.upper()
+                img.save(buffer, format=pil_fmt)
+                buffer.seek(0)
+                data_bytes = buffer.read()
+                mime_map = {"pdf": "application/pdf", "svg": "image/svg+xml"}
+                st.download_button(
+                    f"⬇️ Download {fmt.upper()}",
+                    data=data_bytes,
+                    file_name=f"{plot_choice}.{fmt}",
+                    mime=mime_map[fmt],
+                    key="matplotlib_download"
+                )
+            except Exception as e:
+                st.warning(f"⚠️ Could not convert to {fmt.upper()}: {e}")
+        else:
+            st.download_button(
+                "⬇️ Download PNG",
+                data=bytes(payload),
+                file_name=f"{plot_choice}.png",
+                mime="image/png",
+                key="matplotlib_download"
+            )
 
 # ==============================================
 # 💡 EXPLAIN THIS CHART — Auto LLM Integration
