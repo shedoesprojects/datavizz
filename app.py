@@ -234,35 +234,35 @@ if st.button("Render Plot", use_container_width=True):
 
     # rendering is now outside the generation try/except
     if engine_used == "plotly":
-    st.plotly_chart(payload, use_container_width=True)
-    fmt = download_format.lower()
-    mime_map = {"png": "image/png", "pdf": "application/pdf", "svg": "image/svg+xml"}
+        st.plotly_chart(payload, use_container_width=True)
+        fmt = download_format.lower()
+        mime_map = {"png": "image/png", "pdf": "application/pdf", "svg": "image/svg+xml"}
 
-    try:
-        import io
-        buffer = io.BytesIO()
-        payload.write_image(buffer, format=fmt, scale=2)  # scale=2 for higher res
-        buffer.seek(0)
-        data_bytes = buffer.read()
-        st.download_button(
-            f"⬇️ Download {fmt.upper()}",
-            data_bytes,
-            file_name=f"{plot_choice}.{fmt}",
-            mime=mime_map[fmt]
-        )
-    except Exception:
-        # last resort — render via matplotlib and save
         try:
-            import io, matplotlib.pyplot as plt
-            img_bytes = payload.to_image(format="png", engine="kaleido")
+            import io
+            buffer = io.BytesIO()
+            payload.write_image(buffer, format=fmt, scale=2)  # scale=2 for higher res
+            buffer.seek(0)
+            data_bytes = buffer.read()
             st.download_button(
-                f"⬇️ Download PNG",
-                img_bytes,
-                file_name=f"{plot_choice}.png",
-                mime="image/png"
-            )
-        except Exception as e:
-            st.warning(f"⚠️ Download unavailable: {e}")
+                f"⬇️ Download {fmt.upper()}",
+                data_bytes,
+                file_name=f"{plot_choice}.{fmt}",
+                mime=mime_map[fmt]
+        )
+        except Exception:
+            # last resort — render via matplotlib and save
+            try:
+                import io, matplotlib.pyplot as plt
+                img_bytes = payload.to_image(format="png", engine="kaleido")
+                st.download_button(
+                    f"⬇️ Download PNG",
+                    img_bytes,
+                    file_name=f"{plot_choice}.png",
+                    mime="image/png"
+                )
+            except Exception as e:
+                st.warning(f"⚠️ Download unavailable: {e}")
 
 
 # ==============================================
